@@ -14,8 +14,8 @@
 #define MINIMUM_VOLTAGE static_cast<float>(32.0)
 #define CURRENT_WARNING_TRESHOLD static_cast<float>(70.0)
 
-#define INSTANCE_ID_1 1
-#define INSTANCE_ID_2 2
+#define INSTANCE_ID_1 2
+#define INSTANCE_ID_2 3
 
 enum PowerUnitState {
     POST_INITIALIZATION,

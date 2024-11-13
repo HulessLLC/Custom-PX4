@@ -185,11 +185,11 @@ int CustomBatteryDriver::collect()
     // Update battery status with collected values
     _battery_status.timestamp = _report.timestamp;
     _battery_status.voltage_v = 13;
-    if(_instance_id == INSTANCE_ID_1)
+    if(_instance_id == INSTANCE_ID_1-1)
     {
         _battery_status.voltage_v = _report.voltage1;
     }
-    if(_instance_id == INSTANCE_ID_2)
+    if(_instance_id == INSTANCE_ID_2-1)
     {
         _battery_status.voltage_v = _report.voltage2;
     }
