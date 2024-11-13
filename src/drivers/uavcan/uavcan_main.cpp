@@ -1384,6 +1384,7 @@ extern "C" __EXPORT int uavcan_main(int argc, char *argv[])
 			PX4_INFO("already started");
 			::exit(0);
 		}
+		usleep(5000000);
 
 		// Node ID
 		int32_t node_id = 1;

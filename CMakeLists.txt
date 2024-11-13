@@ -122,7 +122,7 @@ execute_process(
 
 # if proper git tag unavilable default to v0.0.0
 if(NOT ${GIT_DESCRIBE_RESULT} MATCHES "0")
-	set(PX4_GIT_TAG "v0.0.0")
+	set(PX4_GIT_TAG "v1.15.0")
 endif()
 
 message(STATUS "PX4_GIT_TAG: ${PX4_GIT_TAG}")
