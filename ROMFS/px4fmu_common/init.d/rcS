@@ -602,6 +602,8 @@ else
 		zenoh start
 	fi
 
+	CustomBatteryDriver start
+
 #
 # End of autostart.
 #

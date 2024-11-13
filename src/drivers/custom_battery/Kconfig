@@ -1,0 +1,5 @@
+menuconfig DRIVERS_CUSTOM_BATTERY
+	bool "custom_battery"
+	default n
+	---help---
+		Enable support for custom battery
