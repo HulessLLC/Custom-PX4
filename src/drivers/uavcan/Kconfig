@@ -90,6 +90,10 @@ if DRIVERS_UAVCAN
         bool "Subscribe to Safety Button:               ardupilot::indication::Button"
         default y
 
+    config UAVCAN_PARACHUTE_RECEIVER
+        bool "Include parachute receiver"
+        default y
+
 endif #DRIVERS_UAVCAN
 
 

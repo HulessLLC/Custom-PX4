@@ -80,6 +80,10 @@
 #include "safety_state.hpp"
 #endif
 
+#if defined(CONFIG_UAVCAN_PARACHUTE_RECEIVER)
+#include "receiver.hpp"
+#endif
+
 #include "sensors/sensor_bridge.hpp"
 #include "uavcan_driver.hpp"
 #include "uavcan_servers.hpp"
@@ -278,6 +282,9 @@ private:
 #endif
 #if defined(CONFIG_UAVCAN_RGB_CONTROLLER)
 	UavcanRGBController             _rgbled_controller;
+#endif
+#if defined(CONFIG_UAVCAN_PARACHUTE_RECEIVER)
+	ParachuteReceiver		_parachute_receiver_controller;
 #endif
 
 	UavcanLogMessage                _log_message_controller;

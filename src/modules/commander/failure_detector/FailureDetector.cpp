@@ -240,17 +240,33 @@ void FailureDetector::updateAttitudeStatus(const vehicle_status_s &vehicle_statu
 		const bool roll_status = (max_roll > FLT_EPSILON) && (fabsf(roll) > max_roll);
 		const bool pitch_status = (max_pitch > FLT_EPSILON) && (fabsf(pitch) > max_pitch);
 
-		hrt_abstime time_now = hrt_absolute_time();
+		if(roll_status || pitch_status){
+			/*struct failsafe_injection_command_s fail_cmd;
+			fail_cmd.timestamp = hrt_absolute_time();
+			fail_cmd.inject_prearm_failure = false;
+			fail_cmd.inject_failsafe = true;
+			fail_cmd.failure_type = 1;
+			fail_cmd.severity = 1;*/
 
-		// Update hysteresis
-		_roll_failure_hysteresis.set_hysteresis_time_from(false, (hrt_abstime)(1_s * _param_fd_fail_r_ttri.get()));
-		_pitch_failure_hysteresis.set_hysteresis_time_from(false, (hrt_abstime)(1_s * _param_fd_fail_p_ttri.get()));
-		_roll_failure_hysteresis.set_state_and_update(roll_status, time_now);
-		_pitch_failure_hysteresis.set_state_and_update(pitch_status, time_now);
 
-		// Update status
-		_status.flags.roll = _roll_failure_hysteresis.get_state();
-		_status.flags.pitch = _pitch_failure_hysteresis.get_state();
+			//orb_advert_t _failsafe_pub = orb_advertise(ORB_ID(failsafe_injection_command), &fail_cmd);
+
+			//orb_publish(ORB_ID(failsafe_injection_command), _failsafe_pub, &fail_cmd);
+		}
+		else
+		{
+			hrt_abstime time_now = hrt_absolute_time();
+
+			// Update hysteresis
+			_roll_failure_hysteresis.set_hysteresis_time_from(false, (hrt_abstime)(1_s * _param_fd_fail_r_ttri.get()));
+			_pitch_failure_hysteresis.set_hysteresis_time_from(false, (hrt_abstime)(1_s * _param_fd_fail_p_ttri.get()));
+			_roll_failure_hysteresis.set_state_and_update(roll_status, time_now);
+			_pitch_failure_hysteresis.set_state_and_update(pitch_status, time_now);
+
+			// Update status
+			_status.flags.roll = _roll_failure_hysteresis.get_state();
+			_status.flags.pitch = _pitch_failure_hysteresis.get_state();
+		}
 	}
 }
 

@@ -73,6 +73,7 @@
 
 #include <uORB/topics/mavlink_log.h>
 #include <uORB/topics/tune_control.h>
+#include <uORB/topics/failsafe_injection_command.h>
 
 typedef enum VEHICLE_MODE_FLAG {
 	VEHICLE_MODE_FLAG_CUSTOM_MODE_ENABLED  = 1,   /* 0b00000001 Reserved for future use. | */
@@ -161,7 +162,7 @@ static int power_button_state_notification_cb(board_power_button_state_notificat
 #endif // BOARD_HAS_POWER_CONTROL
 
 #ifndef CONSTRAINED_FLASH
-static bool send_vehicle_command(const uint32_t cmd, const float param1 = NAN, const float param2 = NAN,
+bool send_vehicle_command(const uint32_t cmd, const float param1 = NAN, const float param2 = NAN,
 				 const float param3 = NAN,  const float param4 = NAN, const double param5 = static_cast<double>(NAN),
 				 const double param6 = static_cast<double>(NAN), const float param7 = NAN)
 {
@@ -967,6 +968,7 @@ Commander::handle_command(const vehicle_command_s &cmd)
 
 	case vehicle_command_s::VEHICLE_CMD_DO_FLIGHTTERMINATION: {
 			cmd_result = vehicle_command_ack_s::VEHICLE_CMD_RESULT_DENIED;
+			PX4_INFO("Flight termination received");
 
 			if (cmd.param1 > 0.5f) {
 				// Trigger real termination.
@@ -975,7 +977,7 @@ Commander::handle_command(const vehicle_command_s &cmd)
 
 				} else if (_user_mode_intention.change(vehicle_status_s::NAVIGATION_STATE_TERMINATION)) {
 					cmd_result = vehicle_command_ack_s::VEHICLE_CMD_RESULT_ACCEPTED;
-
+					PX4_INFO("Flight terminated");
 				} else {
 					cmd_result = vehicle_command_ack_s::VEHICLE_CMD_RESULT_TEMPORARILY_REJECTED;
 				}
@@ -1887,6 +1889,8 @@ void Commander::run()
 			}
 		}
 
+		uORB::SubscriptionData<failsafe_injection_command_s> failsafe_injection_sub{ORB_ID(failsafe_injection_command)};
+
 		// update actuator_armed
 		_actuator_armed.armed = isArmed();
 		_actuator_armed.prearmed = getPrearmState();
@@ -1897,6 +1901,17 @@ void Commander::run()
 		// _actuator_armed.manual_lockdown // action_request_s::ACTION_KILL
 		_actuator_armed.force_failsafe = (_vehicle_status.nav_state == _vehicle_status.NAVIGATION_STATE_TERMINATION);
 		// _actuator_armed.in_esc_calibration_mode // VEHICLE_CMD_PREFLIGHT_CALIBRATION
+		//PX4_WARN("Actuator_armed status updated");
+
+		//Parachute failure injection
+		if(failsafe_injection_sub.get().inject_prearm_failure)
+		{
+			safetyButtonUpdate();
+		}
+		if(failsafe_injection_sub.get().inject_failsafe)
+		{
+			_actuator_armed.force_failsafe = true;
+		}
 
 		// if force_failsafe or manual_lockdown activated send parachute command
 		if ((!actuator_armed_prev.force_failsafe && _actuator_armed.force_failsafe)
@@ -1936,7 +1951,28 @@ void Commander::run()
 			fd_status.imbalanced_prop_metric = _failure_detector.getImbalancedPropMetric();
 			fd_status.motor_failure_mask = _failure_detector.getMotorFailures();
 			fd_status.timestamp = hrt_absolute_time();
-			_failure_detector_status_pub.publish(fd_status);
+
+
+			if(fd_status.fd_roll || fd_status.fd_pitch)
+			{
+				/*struct failsafe_injection_command_s fail_cmd;
+				fail_cmd.timestamp = hrt_absolute_time();
+				fail_cmd.inject_prearm_failure = false;
+				fail_cmd.inject_failsafe = true;
+				fail_cmd.failure_type = 1;
+				fail_cmd.severity = 1;*/
+
+
+				//orb_advert_t _failsafe_pub = orb_advertise(ORB_ID(failsafe_injection_command), &fail_cmd);
+
+				//orb_publish(ORB_ID(failsafe_injection_command), _failsafe_pub, &fail_cmd);
+			}
+			else
+			{
+				_failure_detector_status_pub.publish(fd_status);
+			}
+
+
 		}
 
 		checkWorkerThread();
@@ -1970,7 +2006,7 @@ void Commander::checkForMissionUpdate()
 	if (_mission_result_sub.updated()) {
 		const mission_result_s &mission_result = _mission_result_sub.get();
 
-		const uint32_t prev_mission_mission_id = mission_result.mission_id;
+		const auto prev_mission_mission_id = mission_result.mission_id;
 		_mission_result_sub.update();
 
 		// if mission_result is valid for the current mission
@@ -2130,9 +2166,18 @@ void Commander::landDetectorUpdate()
 
 void Commander::safetyButtonUpdate()
 {
-	const bool safety_changed = _safety.safetyButtonHandler();
 	_vehicle_status.safety_button_available = _safety.isButtonAvailable();
 	_vehicle_status.safety_off = _safety.isSafetyOff();
+
+	bool change = _safety.safetyButtonHandler();
+	uORB::SubscriptionData<failsafe_injection_command_s> failsafe_injection_sub{ORB_ID(failsafe_injection_command)};
+	if(failsafe_injection_sub.get().inject_prearm_failure)
+	{
+		//PX4_WARN("Safety on");
+		change = _vehicle_status.safety_off;
+		_vehicle_status.safety_off = false;
+	}
+	const bool safety_changed = change;
 
 	if (safety_changed) {
 		// Notify the user if the status of the safety button changes
@@ -2155,10 +2200,9 @@ void Commander::vtolStatusUpdate()
 	if (_vtol_vehicle_status_sub.update(&_vtol_vehicle_status) && is_vtol(_vehicle_status)) {
 
 		// Check if there has been any change while updating the flags (transition = rotary wing status)
-		const uint8_t new_vehicle_type =
-			_vtol_vehicle_status.vehicle_vtol_state == vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW ?
-			vehicle_status_s::VEHICLE_TYPE_FIXED_WING :
-			vehicle_status_s::VEHICLE_TYPE_ROTARY_WING;
+		const auto new_vehicle_type = _vtol_vehicle_status.vehicle_vtol_state == vtol_vehicle_status_s::VEHICLE_VTOL_STATE_FW ?
+					      vehicle_status_s::VEHICLE_TYPE_FIXED_WING :
+					      vehicle_status_s::VEHICLE_TYPE_ROTARY_WING;
 
 		if (new_vehicle_type != _vehicle_status.vehicle_type) {
 			_vehicle_status.vehicle_type = new_vehicle_type;

@@ -102,6 +102,10 @@ UavcanNode::UavcanNode(uavcan::ICanDriver &can_driver, uavcan::ISystemClock &sys
 #if defined(CONFIG_UAVCAN_RGB_CONTROLLER)
 	_rgbled_controller(_node),
 #endif
+
+#if defined(CONFIG_UAVCAN_PARACHUTE_RECEIVER)
+	_parachute_receiver_controller(_node),
+#endif
 	_log_message_controller(_node),
 	_time_sync_master(_node),
 	_time_sync_slave(_node),
@@ -573,6 +577,15 @@ UavcanNode::init(uavcan::NodeID node_id, UAVCAN_DRIVER::BusEvent &bus_events)
 
 #if defined(CONFIG_UAVCAN_RGB_CONTROLLER)
 	ret = _rgbled_controller.init();
+
+	if (ret < 0) {
+		return ret;
+	}
+
+#endif
+
+#if defined(CONFIG_UAVCAN_PARACHUTE_RECEIVER)
+	ret = _parachute_receiver_controller.init();
 
 	if (ret < 0) {
 		return ret;

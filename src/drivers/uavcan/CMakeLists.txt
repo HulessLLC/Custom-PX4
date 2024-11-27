@@ -154,6 +154,7 @@ px4_add_module(
 		rgbled.hpp
 		safety_state.cpp
 		safety_state.hpp
+		receiver.hpp
 
 		# Main
 		uavcan_main.cpp
