@@ -12,6 +12,7 @@
 CustomBatteryDriver::CustomBatteryDriver(int instance_id, int bus, int address) :
     ScheduledWorkItem(MODULE_NAME, px4::wq_configurations::lp_default),
     I2C(2, "/dev/i2c_float_reader", bus, address, 100000),
+    ModuleParams(nullptr),
     _instance_id(instance_id),
     _sample_perf(perf_alloc(PC_ELAPSED, "i2c_float_reader: read"))
 {
@@ -36,10 +37,10 @@ int CustomBatteryDriver::sendInitBatteryStatus()
     _battery_status.connected = true;
     _battery_status.cycle_count = 100;
     // Set unique parameters based on instance ID
-    if (_instance_id == INSTANCE_ID_1) {
+    if (_instance_id == _bat_id_1.get()) {
         _battery_status.serial_number = 12345;
         _battery_status.source = 1;
-    } else if (_instance_id == INSTANCE_ID_2) {
+    } else if (_instance_id == _bat_id_2.get()) {
         _battery_status.serial_number = 23456;
         _battery_status.source = 2;
     }
@@ -47,8 +48,9 @@ int CustomBatteryDriver::sendInitBatteryStatus()
     _battery_status.state_of_health = 95; // Placeholder state of health (95%)
     _battery_status.warning = battery_status_s::BATTERY_WARNING_NONE; // Default warning state
     _battery_status.id = _instance_id; // Set the instance ID
+    battery_id = _instance_id;
 
-    // Spread the voltage across 12 cells (even distribution for now)
+    // Spread the voltage across 10 cells (even distribution for now)
     setPerCellVoltage(_battery_status.voltage_v);
 
     // Advertise the battery status topic
@@ -69,6 +71,18 @@ void CustomBatteryDriver::setPerCellVoltage(float voltage)
     float per_cell_voltage = voltage / 10;
     for (int i = 0; i < 10; ++i) {
         _battery_status.voltage_cell_v[i] = per_cell_voltage;
+    }
+}
+
+void CustomBatteryDriver::parameters_update()
+{
+    if (_parameter_update_sub.updated()) {
+        parameter_update_s param_update;
+        _parameter_update_sub.copy(&param_update);
+
+        // If any parameter updated, call updateParams() to check if
+        // this class attributes need updating (and do so).
+        updateParams();
     }
 }
 
@@ -104,15 +118,15 @@ void CustomBatteryDriver::triggerWarning(uint8_t warning_severity, uint8_t id, c
     if (cause != nullptr) {
         switch (warning_severity) {
             case battery_status_s::BATTERY_WARNING_NONE:
-                PX4_INFO("%s", cause);
+                PX4_INFO("%s: %d", cause, id);
                 break;
 
             case battery_status_s::BATTERY_WARNING_LOW:
-                PX4_WARN("%s", cause);
+                PX4_WARN("%s: %d", cause, id);
                 break;
 
             case battery_status_s::BATTERY_WARNING_CRITICAL:
-                PX4_ERR("%s", cause);
+                PX4_ERR("%s: %d", cause, id);
                 break;
 
             default:
@@ -184,15 +198,16 @@ int CustomBatteryDriver::collect()
 
     // Update battery status with collected values
     _battery_status.timestamp = _report.timestamp;
-    _battery_status.voltage_v = 13;
-    if(_instance_id == INSTANCE_ID_1-1)
+    _battery_status.voltage_v = 13;                         //Placeholder for "Battery not identified"
+    //PX4_INFO("Battery id: %d", battery_id);
+    if(battery_id == _bat_id_1.get())
     {
         _battery_status.voltage_v = _report.voltage1;
     }
-    if(_instance_id == INSTANCE_ID_2-1)
+    if(battery_id == _bat_id_2.get())
     {
         _battery_status.voltage_v = _report.voltage2;
-    }
+    }                                                       //By this moment both batteries should get data from readings
     _battery_status.current_a = _report.current;
     _battery_status.current_average_a = _report.current;
 
@@ -203,25 +218,52 @@ int CustomBatteryDriver::collect()
     orb_publish(ORB_ID(battery_status), _battery_status_topic_pub, &_battery_status);
 
     // Check conditions for warnings
-    if (_report.voltage2 < MINIMUM_VOLTAGE) {
-        triggerWarningOnce(battery_status_s::BATTERY_WARNING_CRITICAL, INTERNAL_POWER_LOW, "Internal power failure, triggering critical error...");
+    if (_report.voltage2 < _min_volt.get()) {
+        triggerWarningOnce(battery_status_s::BATTERY_WARNING_CRITICAL, INTERNAL_POWER_LOW, "Internal power failure");
         return PX4_ERROR;
     }
 
-    if (_report.current > CURRENT_WARNING_TRESHOLD) {
-        triggerWarningOnce(battery_status_s::BATTERY_WARNING_LOW, CURRENT_TOO_HIGH, "Current too high");
+    current_time = hrt_absolute_time();
+
+if (_report.current > _max_amp.get()) {
+    if (!has_warning) {
+        if (time_var == 0) {
+            time_var = current_time; // Start timing
+        }
+        if (current_time - time_var > static_cast<uint64_t>(_amp_timeout.get()) * 1000) {
+            triggerWarning(battery_status_s::BATTERY_WARNING_LOW, CURRENT_TOO_HIGH, "Current too high");
+            has_warning = true;
+            time_var = 0; // Reset time_var after triggering
+        }
+    } else {
+        time_var = 0; // Reset if already warned
     }
+} else if (_report.current < _max_amp.get()) {
+    if (has_warning) {
+        if (time_var == 0) {
+            time_var = current_time; // Start timing
+        }
+        if (current_time - time_var > static_cast<uint64_t>(_amp_timeout.get()) * 1000) {
+            triggerWarning(battery_status_s::BATTERY_WARNING_NONE, CURRENT_TOO_HIGH, "Current returned back to normal");
+            has_warning = false;
+            time_var = 0; // Reset time_var after clearing the warning
+        }
+    } else {
+        time_var = 0; // Reset if already stable
+    }
+}
+
 
     switch (state) {
         case EXTERNAL_POWER:
-            if (_report.voltage1 < MINIMUM_VOLTAGE) {
+            if (_report.voltage1 < _min_volt.get()) {
                 triggerWarning(battery_status_s::BATTERY_WARNING_CRITICAL, EXTERNAL_POWER_LOST, "External power turned OFF, switching to reserve power");
                 state = RESERVE_POWER;
             }
             break;
 
         case POST_INITIALIZATION:
-            if (_report.voltage1 > MINIMUM_VOLTAGE) {
+            if (_report.voltage1 > _min_volt.get()) {
                 triggerWarning(battery_status_s::BATTERY_WARNING_NONE, EXTERNAL_POWER_ON, "External power turned ON");
                 state = EXTERNAL_POWER;
             } else {
