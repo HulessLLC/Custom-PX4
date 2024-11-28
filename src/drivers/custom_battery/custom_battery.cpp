@@ -36,6 +36,8 @@ int CustomBatteryDriver::sendInitBatteryStatus()
     _battery_status.cell_count = 10;
     _battery_status.connected = true;
     _battery_status.cycle_count = 100;
+    _battery_status.time_remaining_s = NAN;
+    _battery_status.capacity = 10000;
     // Set unique parameters based on instance ID
     if (_instance_id == _bat_id_1.get()) {
         _battery_status.serial_number = 12345;

@@ -51,6 +51,9 @@
 #include <px4_platform_common/module.h>
 #include <px4_platform_common/module_params.h>
 
+#include <uORB/topics/failsafe_injection_command.h>
+
+
 // publications
 #include <uORB/Publication.hpp>
 #include <uORB/topics/actuator_armed.h>

@@ -16,6 +16,7 @@
 /*
 TODO: Add custom notifications
 TODO: Add external parachute command and make commander use it
+!   Altitude
 */
 
 // Initialize the parachute status timeout duration (e.g., 5 seconds)
@@ -121,6 +122,7 @@ class ParachuteReceiver : public ModuleParams
         bool parachute_ready = false;
         bool prev_prearm_failure_status = false;
         bool prearm_failure_status = false;
+        bool  flightterm = false;
         //int prearm_failure_counter = 0;
 
         DEFINE_PARAMETERS(
@@ -152,7 +154,10 @@ class ParachuteReceiver : public ModuleParams
             if(vehicle_command_sub.get().command == vehicle_command_s::VEHICLE_CMD_DO_PARACHUTE && static_cast<int>(vehicle_command_sub.get().param1) == static_cast<int>(vehicle_command_s::PARACHUTE_ACTION_RELEASE))
             {
                 PX4_ERR("Triggering parachute: External command received");
+                flightterm = true;
 
+                //_timer.stop();
+                //_watchdog_timer.stop();
 
             }
 
@@ -162,7 +167,7 @@ class ParachuteReceiver : public ModuleParams
             // Publish 'FC_heartbeat' KeyValue message
             uavcan::protocol::debug::KeyValue kv_msg;
             kv_msg.value = altitude;//1.0f;  // Indicating FC is active
-            kv_msg.key = "FC_heartbeat";
+            kv_msg.key = flightterm ? "Flightterm" : "FC_heartbeat";
 
             const int kv_pub_res = _kv_pub.broadcast(kv_msg);
             if (kv_pub_res < 0) {
