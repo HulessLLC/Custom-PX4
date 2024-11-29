@@ -122,7 +122,8 @@ class ParachuteReceiver : public ModuleParams
         bool parachute_ready = false;
         bool prev_prearm_failure_status = false;
         bool prearm_failure_status = false;
-        bool  flightterm = false;
+        bool prev_flightterm_status = false;
+        bool flightterm = false;
         //int prearm_failure_counter = 0;
 
         DEFINE_PARAMETERS(
@@ -263,10 +264,10 @@ class ParachuteReceiver : public ModuleParams
             if (msg.key == "flight_termination")
             {
                 PX4_WARN("Received prearm failure message");
+                bool flightterm_status_changed = (prev_flightterm_status != flightterm);
                 flight_termination_counter++;
                 if(flight_termination_counter > 6)
                 {
-                    PX4_ERR("Flight termination from parachute");
                     fail_msg.timestamp = hrt_absolute_time();
                     fail_msg.inject_failsafe = true;
                     fail_msg.inject_prearm_failure = false;
@@ -274,12 +275,14 @@ class ParachuteReceiver : public ModuleParams
 	                fail_msg.severity = 1;
 
                     orb_publish(ORB_ID(failsafe_injection_command), _failsafe_injection_command_pub, &fail_msg);
-                    PX4_ERR("Sent prearm failure command via uORB");
+                    if(flightterm_status_changed) PX4_ERR("Flight termination from parachute, sent flightterm command via uORB");
                     flight_termination_counter = 0;
+                    flightterm = true;
                 }
             }
 
             prev_prearm_failure_status = prearm_failure_status;
+            prev_flightterm_status = flightterm;
         }
 
         void initializeSafetyButton()
