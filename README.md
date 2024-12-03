@@ -18,7 +18,7 @@ Driver that monitors power unit data in real-time for current, internal voltage 
 
 ## Parameters:
 | Parameter name | Datatype | Default value | Description |
-| -------------- | -------- | ------------- | ----------- |
+| ------------ | :------: | :-----------: | ----------- |
 | CBAT_ENABLE | Boolean | Disabled  | Enables/Disables driver |
 | CBAT_ID_1 | Int32 | 7 | ID of the first battery |
 | CBAT_ID_2 | Int32 | 8 | ID of the second battery |
