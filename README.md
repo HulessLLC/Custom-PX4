@@ -8,10 +8,10 @@ This repository holds the [PX4](http://px4.io) flight control solution for drone
 
 Driver that monitors power unit data in real-time for current, internal voltage and external voltage. Received values will be displayed as two PX4 batteries, one containing external voltage, and other - internal.
 
-#### Warnings conditions:
+#### Warning conditions:
 * Power consumption is too high
 
-#### Critical errors conditions:
+#### Critica errors conditions:
 * External power not turned on
 * Internal power failure
 * I2C communication failed
