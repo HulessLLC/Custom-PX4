@@ -8,6 +8,9 @@ This repository holds the [PX4](http://px4.io) flight control solution for drone
 
 Driver that monitors power unit data in real-time for current, internal voltage and external voltage. Received values will be displayed as two PX4 batteries, one containing external voltage, and other - internal.
 
+Data is received via I2C, then received voltage is spread across 10 cells (for some reason direct voltage assignment doesn't work). Program distinguishes between instances using instance ids set in CBAT_ID_1 and CBAT_ID_2 which must be unique.
+Warnings and critical errors are triggered using default battery warnings and critical errors. Battery data for both instances is published to battery_status uORB topic which is displayed as two batteries (one for each instance) in GCS.
+
 #### Warning conditions:
 * Power consumption is too high
 
