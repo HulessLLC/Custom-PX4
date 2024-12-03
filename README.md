@@ -11,7 +11,7 @@ Driver that monitors power unit data in real-time for current, internal voltage 
 #### Warning conditions:
 * Power consumption is too high
 
-#### Critica errors conditions:
+#### Critical error conditions:
 * External power not turned on
 * Internal power failure
 * I2C communication failed
