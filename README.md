@@ -6,7 +6,7 @@ This repository holds the [PX4](http://px4.io) flight control solution for drone
 ### Custom battery monitor driver
 [Driver location](https://github.com/PX4/PX4-Autopilot/tree/main/src/drivers/custom_battery)
 
-Driver that monitors power unit data in real-time for current, internal voltage and external voltage. Received values will be displayed as two PX4 batteries, one containing external voltage, and other | internal.
+Driver that monitors power unit data in real-time for current, internal voltage and external voltage. Received values will be displayed as two PX4 batteries, one containing external voltage, and other - internal.
 
 #### Warnings conditions:
 * Power consumption is too high
