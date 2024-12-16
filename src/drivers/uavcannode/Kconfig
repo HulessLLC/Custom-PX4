@@ -77,5 +77,8 @@ if DRIVERS_UAVCANNODE
     config UAVCANNODE_STATIC_TEMPERATURE
         bool "Include static temperature"
         default n
+    config UAVCANNODE_PARACHUTE_PUBLISHER
+        bool "Include parachute publisher"
+        default n
 
 endif #DRIVERS_UAVCANNODE

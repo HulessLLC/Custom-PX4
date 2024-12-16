@@ -22,3 +22,5 @@ then
 fi
 
 afbrs50 start
+
+tone_alarm start

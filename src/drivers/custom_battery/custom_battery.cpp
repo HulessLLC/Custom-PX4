@@ -222,6 +222,8 @@ int CustomBatteryDriver::collect()
     // Check conditions for warnings
     if (_report.voltage2 < _min_volt.get()) {
         triggerWarningOnce(battery_status_s::BATTERY_WARNING_CRITICAL, INTERNAL_POWER_LOW, "Internal power failure");
+        if(!triggered_warnings[INTERNAL_POWER_LOW])
+            events::send(events::ID("cbat_voltage_low"), events::Log::Critical, "Internal power failure");
         return PX4_ERROR;
     }
 
@@ -234,6 +236,7 @@ if (_report.current > _max_amp.get()) {
         }
         if (current_time - time_var > static_cast<uint64_t>(_amp_timeout.get()) * 1000) {
             triggerWarning(battery_status_s::BATTERY_WARNING_LOW, CURRENT_TOO_HIGH, "Current too high");
+            events::send(events::ID("cbat_current_high"), events::Log::Warning, "Current too high");
             has_warning = true;
             time_var = 0; // Reset time_var after triggering
         }
@@ -247,6 +250,7 @@ if (_report.current > _max_amp.get()) {
         }
         if (current_time - time_var > static_cast<uint64_t>(_amp_timeout.get()) * 1000) {
             triggerWarning(battery_status_s::BATTERY_WARNING_NONE, CURRENT_TOO_HIGH, "Current returned back to normal");
+            events::send(events::ID("cbat_current_normal"), events::Log::Info, "Current returned back to normal");
             has_warning = false;
             time_var = 0; // Reset time_var after clearing the warning
         }
@@ -260,6 +264,8 @@ if (_report.current > _max_amp.get()) {
         case EXTERNAL_POWER:
             if (_report.voltage1 < _min_volt.get()) {
                 triggerWarning(battery_status_s::BATTERY_WARNING_CRITICAL, EXTERNAL_POWER_LOST, "External power turned OFF, switching to reserve power");
+                events::send(events::ID("cbat_ext_lost"), events::Log::Error, "External power turned OFF, switching to reserve power");
+                beep();
                 state = RESERVE_POWER;
             }
             break;
@@ -267,9 +273,13 @@ if (_report.current > _max_amp.get()) {
         case POST_INITIALIZATION:
             if (_report.voltage1 > _min_volt.get()) {
                 triggerWarning(battery_status_s::BATTERY_WARNING_NONE, EXTERNAL_POWER_ON, "External power turned ON");
+                events::send(events::ID("cbat_ext_normal"), events::Log::Info, "External power turned ON");
+                beep();
                 state = EXTERNAL_POWER;
             } else {
-                triggerWarningOnce(battery_status_s::BATTERY_WARNING_CRITICAL, NO_EXTERNAL_POWER, "External power not turned ON");
+                triggerWarningOnce(battery_status_s::BATTERY_WARNING_CRITICAL, NO_EXTERNAL_POWER, "External power NOT turned on");
+                if(!triggered_warnings[NO_EXTERNAL_POWER])
+                    events::send(events::ID("cbat_ext_off"), events::Log::Warning, "External power NOT turned on");
             }
             break;
 

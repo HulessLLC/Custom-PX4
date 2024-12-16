@@ -3040,6 +3040,8 @@ void Commander::send_parachute_command()
 	vcmd.timestamp = hrt_absolute_time();
 	vcmd_pub.publish(vcmd);
 
+
+
 	set_tune_override(tune_control_s::TUNE_ID_PARACHUTE_RELEASE);
 }
 

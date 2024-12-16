@@ -12,11 +12,13 @@
 #include <uORB/topics/parameter_update.h>
 #include <uORB/Subscription.hpp>
 #include <uORB/topics/vehicle_command.h>
+#include <px4_platform_common/events.h>
 
 /*
-TODO: Add custom notifications
-TODO: Add external parachute command and make commander use it
-!   Altitude
+//TODO: Add custom notifications
+//TODO: Add external parachute command and make commander use it
+//!   Altitude
+//TODO: Make it use prearm_failure as parachute's heartbeat
 */
 
 // Initialize the parachute status timeout duration (e.g., 5 seconds)
@@ -64,13 +66,6 @@ class ParachuteReceiver : public ModuleParams
         int init()
         {
             initializeSafetyButton();
-
-            int32_t uavcan_sub_parachute = 0;
-            param_get(param_find("UAVCAN_SUB_PRCHT"), &uavcan_sub_parachute);
-            if(uavcan_sub_parachute == 0)
-            {
-                return 0;
-            }
 
             // Initialize KeyValue publisher
             _kv_pub.setTxTimeout(uavcan::MonotonicDuration::fromMSec(100));
@@ -124,10 +119,11 @@ class ParachuteReceiver : public ModuleParams
         bool prearm_failure_status = false;
         bool prev_flightterm_status = false;
         bool flightterm = false;
+        bool gcs_notified = false;
         //int prearm_failure_counter = 0;
 
         DEFINE_PARAMETERS(
-		(ParamFloat<px4::params::UAVCAN_PRCHT_ALT>) _parachute_min_alt
+        (ParamInt<px4::params::UAVCAN_SUB_PRCHT>) _uavcan_sub_parachute
 	    )
 
         uORB::SubscriptionInterval _parameter_update_sub{ORB_ID(parameter_update), 1_s};
@@ -156,10 +152,11 @@ class ParachuteReceiver : public ModuleParams
             {
                 PX4_ERR("Triggering parachute: External command received");
                 flightterm = true;
-
                 //_timer.stop();
                 //_watchdog_timer.stop();
-
+                bool flightterm_status_changed = (prev_flightterm_status != flightterm);
+                if(flightterm_status_changed)
+                    events::send(events::ID("commander_parachute_deployed"), events::Log::Critical, "Parachute deployed");
             }
 
             //vcmd.command = vehicle_command_s::VEHICLE_CMD_DO_PARACHUTE;
@@ -176,22 +173,7 @@ class ParachuteReceiver : public ModuleParams
             } else {
                 PX4_INFO("FC heartbeat message sent");
             }
-
-            //PX4_INFO("Parameter value: %f", static_cast<double>(_parachute_min_alt.get()));
-
-
-
-            //PX4_INFO("Altitude: %f", static_cast<double>(altitude));
-            /*            uavcan::protocol::debug::KeyValue alt_msg;
-            kv_msg.value = altitude;
-            kv_msg.key = "Altitude";
-
-            const int alt_pub_res = _kv_pub.broadcast(alt_msg);
-            if (alt_pub_res < 0) {
-                PX4_ERR("Altitude publication failure: %d", alt_pub_res);
-            } else {
-                PX4_INFO("Altitude message sent");
-            }*/
+            prev_flightterm_status = flightterm;
         }
 
         // Handle incoming KeyValue messages
@@ -200,14 +182,13 @@ class ParachuteReceiver : public ModuleParams
             uORB::SubscriptionData<failsafe_injection_command_s> failsafe_injection_sub{ORB_ID(failsafe_injection_command)};
             prearm_failure_status = failsafe_injection_sub.get().inject_prearm_failure;
             //if(failsafe_injection_sub.get().inject_failsafe) PX4_WARN("Flight termination received via uORB");
-
-
-            if (msg.key == "parachute_ready") {
-                // Update the last parachute status time
+            // Heartbeat part
+            if (msg.key == "prearm_failure" || msg.key == "flight_term")
+            {
                 _last_parachute_time = _node.getMonotonicTime();
                 PX4_INFO("Received parachute ready message");
 
-                if(!parachute_ready)
+                /*if(!parachute_ready)
                 {
                     fail_msg.timestamp = hrt_absolute_time();
                     fail_msg.inject_failsafe = false;
@@ -222,7 +203,7 @@ class ParachuteReceiver : public ModuleParams
                     if (!pub_res) {
                         PX4_ERR("Failed to publish failsafe injection command via uORB.");
                     }
-                }
+                }*/
             }
             if (msg.key == "prearm_failure" )//&& (prev_prearm_failure_status != prearm_failure_status))
             {
@@ -250,9 +231,7 @@ class ParachuteReceiver : public ModuleParams
                     fail_msg.severity = 1;
                 }
 
-                //if (_failsafe_injection_command_pub == nullptr) {
-                    _failsafe_injection_command_pub = orb_advertise(ORB_ID(failsafe_injection_command), &fail_msg);
-                //}
+                _failsafe_injection_command_pub = orb_advertise(ORB_ID(failsafe_injection_command), &fail_msg);
 
                 bool pub_res = (orb_publish(ORB_ID(failsafe_injection_command), _failsafe_injection_command_pub, &fail_msg) == PX4_OK);
                 if (pub_res && prearm_status_changed) {
@@ -261,7 +240,7 @@ class ParachuteReceiver : public ModuleParams
                     PX4_ERR("Failed to publish failsafe injection command via uORB.");
                 }
             }
-            if (msg.key == "flight_termination")
+            if (msg.key == "flight_term")
             {
                 PX4_WARN("Received prearm failure message");
                 bool flightterm_status_changed = (prev_flightterm_status != flightterm);
@@ -275,7 +254,10 @@ class ParachuteReceiver : public ModuleParams
 	                fail_msg.severity = 1;
 
                     orb_publish(ORB_ID(failsafe_injection_command), _failsafe_injection_command_pub, &fail_msg);
-                    if(flightterm_status_changed) PX4_ERR("Flight termination from parachute, sent flightterm command via uORB");
+                    if(flightterm_status_changed)
+                    {
+                        PX4_ERR("Flight termination from parachute, sent flightterm command via uORB");
+                    }
                     flight_termination_counter = 0;
                     flightterm = true;
                 }

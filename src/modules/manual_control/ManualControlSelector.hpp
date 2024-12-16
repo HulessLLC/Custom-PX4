@@ -50,6 +50,7 @@ private:
 	bool isInputValid(const manual_control_setpoint_s &input, uint64_t now) const;
 
 	manual_control_setpoint_s _setpoint{};
+	manual_control_setpoint_s _setpoint_app_mode{};
 	uint64_t _timeout{0};
 	int32_t _rc_in_mode{0};
 	int _instance{-1};

@@ -12,6 +12,8 @@ uint8 SOURCE_MAVLINK_3 = 5		# mavlink instance 3
 uint8 SOURCE_MAVLINK_4 = 6		# mavlink instance 4
 uint8 SOURCE_MAVLINK_5 = 7		# mavlink instance 5
 
+uint8 SOURCE_LOCAL_APP = 255	# Local application (it always has the highest priority)
+
 uint8 data_source
 
 # Any of the channels may not be available and be set to NaN

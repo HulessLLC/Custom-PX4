@@ -30,7 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-#include <parameters/param.h>
+
 /**
  * @author Pavel Kirienko <pavel.kirienko@gmail.com>
  */
@@ -111,20 +111,6 @@ PARAM_DEFINE_FLOAT(UAVCAN_RNG_MAX, 200.0f);
  * @group UAVCAN
  */
 PARAM_DEFINE_FLOAT(UAVCAN_ECU_MAXF, 15.0f);
-
-/**
- * Parachute deploment min altitude
- *
- * aaaaaaaaaaaaaaaaaaaaaaaaaa
- *
- * @min 0.0
- * @unit m
- * @decimal 1
- * @increment 0.1
- * @reboot_required true
- * @group UAVCAN
- */
-PARAM_DEFINE_FLOAT(UAVCAN_PRCHT_ALT, 20.0f);
 
 /**
  * UAVCAN fuel tank fuel type
@@ -449,7 +435,6 @@ PARAM_DEFINE_INT32(UAVCAN_SUB_RNG, 0);
  * @group UAVCAN
  */
 PARAM_DEFINE_INT32(UAVCAN_SUB_BTN, 0);
-
 
 /**
  * subscription parachute

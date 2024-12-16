@@ -7,4 +7,5 @@ px4_add_module(
         custom_battery_main.cpp
     INCLUDES
         ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/platforms/nuttx/NuttX/apps/graphics/pdcurs34/include
 )

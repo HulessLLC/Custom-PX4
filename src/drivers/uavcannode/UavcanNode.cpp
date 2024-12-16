@@ -105,6 +105,10 @@
 #include "Subscribers/LightsCommand.hpp"
 #endif // CONFIG_UAVCANNODE_LIGHTS_COMMAND
 
+#if defined(CONFIG_UAVCANNODE_PARACHUTE_PUBLISHER)
+#include "Publishers/ParachutePublisher.hpp"
+#endif // CONFIG_UAVCANNODE_PARACHUTE_PUBLISHER
+
 #if defined(CONFIG_UAVCANNODE_RTK_DATA)
 #include "Publishers/RelPosHeading.hpp"
 #include "Publishers/MovingBaselineData.hpp"
@@ -430,6 +434,10 @@ int UavcanNode::init(uavcan::NodeID node_id, UAVCAN_DRIVER::BusEvent &bus_events
 #if defined(CONFIG_UAVCANNODE_LIGHTS_COMMAND)
 	_subscriber_list.add(new LightsCommand(_node));
 #endif // CONFIG_UAVCANNODE_LIGHTS_COMMAND
+
+#if defined(CONFIG_UAVCANNODE_PARACHUTE_PUBLISHER)
+	_publisher_list.add(new ParachutePublisher(this, _node));
+#endif // CONFIG_UAVCANNODE_STATIC_TEMPERATURE
 
 #if defined(CONFIG_UAVCANNODE_RTK_DATA)
 	int32_t cannode_sub_mbd = 0;

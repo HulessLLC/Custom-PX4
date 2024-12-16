@@ -36,6 +36,7 @@
 #include "../../Arming/ArmAuthorization/ArmAuthorization.h"
 #include <lib/circuit_breaker/circuit_breaker.h>
 #include <uORB/topics/vehicle_command_ack.h>
+#include <uORB/topics/failsafe_injection_command.h>
 
 void SystemChecks::checkAndReport(const Context &context, Report &reporter)
 {
@@ -113,13 +114,20 @@ void SystemChecks::checkAndReport(const Context &context, Report &reporter)
 		 * This check can be configured via <param>CBRK_IO_SAFETY</param> parameter.
 		 * </profile>
 		 */
-		reporter.armingCheckFailure(NavModes::All, health_component_t::system, events::ID("check_system_safety_button"),
-					    events::Log::Info, "Press safety button first");
+		reporter.armingCheckFailure(NavModes::All, health_component_t::system, events::ID("check_system_safety_pin"),
+					    events::Log::Info, "Remove safety pin");
 
 		if (reporter.mavlink_log_pub()) {
-			mavlink_log_critical(reporter.mavlink_log_pub(), "Preflight Fail: Press safety button first");
+			mavlink_log_critical(reporter.mavlink_log_pub(), "Preflight Fail: Remove safety pin");
 		}
 	}
+
+	//parachute
+	/*uORB::SubscriptionData<failsafe_injection_command_s> failsafe_injection_sub{ORB_ID(failsafe_injection_command)};
+	if(failsafe_injection_sub.get().inject_parachute)
+	{
+
+	}*/
 
 	// avoidance system
 	if (context.status().avoidance_system_required) {

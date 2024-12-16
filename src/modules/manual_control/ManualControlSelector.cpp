@@ -46,11 +46,17 @@ void ManualControlSelector::updateWithNewInputSample(uint64_t now, const manual_
 	// First check if the chosen input got invalid, so it can get replaced
 	updateValidityOfChosenInput(now);
 
+	const bool application_input = input.data_source == manual_control_setpoint_s::SOURCE_LOCAL_APP;
+	if ((_setpoint.data_source == manual_control_setpoint_s::SOURCE_LOCAL_APP) && !application_input) {
+		if (isInputValid(input, now))
+			_setpoint_app_mode = input;
+	}
+
 	const bool update_existing_input = _setpoint.valid && (input.data_source == _setpoint.data_source);
 	const bool start_using_new_input = !_setpoint.valid;
 
 	// Switch to new input if it's valid and we don't already have a valid one
-	if (isInputValid(input, now) && (update_existing_input || start_using_new_input)) {
+	if (isInputValid(input, now) && (application_input || update_existing_input || start_using_new_input)) {
 		_setpoint = input;
 		_setpoint.valid = true;
 		_setpoint.timestamp = now; // timestamp_sample is preserved
@@ -61,6 +67,26 @@ void ManualControlSelector::updateWithNewInputSample(uint64_t now, const manual_
 			_first_valid_source = _setpoint.data_source;
 		}
 	}
+
+	if ((_setpoint.data_source == manual_control_setpoint_s::SOURCE_LOCAL_APP)
+	     && application_input
+	     && isInputValid(_setpoint_app_mode, now)) {
+		_setpoint.roll += _setpoint_app_mode.roll * 0.4f;
+		if (_setpoint.roll > 1) _setpoint.roll = 1.0f;
+		else if (_setpoint.roll < -1) _setpoint.roll = -1.0f;
+
+		_setpoint.pitch += _setpoint_app_mode.pitch * 0.4f;
+		if (_setpoint.pitch > 1) _setpoint.pitch = 1.0f;
+		else if (_setpoint.pitch < -1) _setpoint.pitch = -1.0f;
+
+		_setpoint.yaw += _setpoint_app_mode.yaw * 0.4f;
+		if (_setpoint.yaw > 1) _setpoint.yaw = 1.0f;
+		else if (_setpoint.yaw < -1) _setpoint.yaw = -1.0f;
+
+		_setpoint.throttle += _setpoint_app_mode.throttle * 0.4f;
+		if (_setpoint.throttle > 1) _setpoint.throttle = 1.0f;
+		else if (_setpoint.throttle < -1) _setpoint.throttle = -1.0f;
+	}
 }
 
 bool ManualControlSelector::isInputValid(const manual_control_setpoint_s &input, uint64_t now) const
@@ -68,6 +94,11 @@ bool ManualControlSelector::isInputValid(const manual_control_setpoint_s &input,
 	// Check for timeout
 	const bool sample_from_the_past = now >= input.timestamp_sample;
 	const bool sample_newer_than_timeout = now - input.timestamp_sample < _timeout;
+
+	// Check application input
+	if (input.data_source == manual_control_setpoint_s::SOURCE_LOCAL_APP) {
+		return sample_from_the_past && sample_newer_than_timeout && input.valid;
+	}
 
 	// Check if source matches the configuration
 	const bool source_rc_matched = (_rc_in_mode == 0) && (input.data_source == manual_control_setpoint_s::SOURCE_RC);

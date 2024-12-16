@@ -12,6 +12,8 @@
 #include <uORB/Subscription.hpp>
 #include <uORB/SubscriptionCallback.hpp>
 #include <px4_platform_common/px4_config.h>
+#include <px4_platform_common/events.h>
+#include <curses.h>
 
 // Add this line to use the _s literal
 using namespace time_literals;

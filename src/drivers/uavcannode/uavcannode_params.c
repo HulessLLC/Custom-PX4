@@ -30,6 +30,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
+#include <parameters/param.h>
 
 /**
  * UAVCAN CAN bus bitrate.
@@ -76,3 +77,38 @@ PARAM_DEFINE_INT32(CANNODE_SUB_RTCM, 0);
  * @group UAVCAN
  */
 PARAM_DEFINE_INT32(CANNODE_PUB_MBD, 0);
+
+/**
+ * Set minimum altitude for parachute deployment
+ *
+ * @unit m
+ * @min 0.0
+ * @max 1000
+ * @decimal 1
+ * @reboot_required true
+ * @group UAVCAN
+ */
+PARAM_DEFINE_FLOAT(CANNODE_PCHT_MIN, 20.0f);
+
+/**
+ * Set maximum altitude for parachute deployment
+ *
+ * @unit m
+ * @min 0.0
+ * @max 1000
+ * @decimal 1
+ * @reboot_required true
+ * @group UAVCAN
+ */
+PARAM_DEFINE_FLOAT(CANNODE_PCHT_MAX, 150.0f);
+
+/**
+ * Set parachute buzzer frequency
+ *
+ * @unit m
+ * @min 0
+ * @max 20000
+ * @reboot_required true
+ * @group UAVCAN
+ */
+PARAM_DEFINE_INT32(CANNODE_PCHT_FQ, 4000);
